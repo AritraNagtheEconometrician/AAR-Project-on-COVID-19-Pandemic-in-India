@@ -6,26 +6,33 @@ library(dplyr)
 library(modelsummary)
 library(fixest)
 library(lubridate)
+# Loads the libraries needed for this project
 Wheat <- read.csv("C:/Users/mnag6/Documents/Mandi price data/Wheat.csv")
 Rice <- read.csv("C:/Users/mnag6/Documents/Mandi price data/Rice.csv")
+# Loads the datasets
 Wheat <- rename(Wheat, state = "State.Name", district = "District.Name", market = "Market.Name", variety = "Variety", group = "Group", quantity_of_arrivals = "Arrivals..Tonnes.", minprice = "Min.Price..Rs..Quintal.", maxprice = "Max.Price..Rs..Quintal.", modalprice = "Modal.Price..Rs..Quintal.", date = "Reported.Date")
 Rice <- rename(Rice, state = "State.Name", district = "District.Name", market = "Market.Name", variety = "Variety", group = "Group", quantity_of_arrivals = "Arrivals..Tonnes.", minprice = "Min.Price..Rs..Quintal.", maxprice = "Max.Price..Rs..Quintal.", modalprice = "Modal.Price..Rs..Quintal.", date = "Reported.Date")
 Wheat$date <- format(as.Date(Wheat$date, format = "%d %b %Y"))
 Rice$date <- format(as.Date(Rice$date, format = "%d %b %Y"))
+# Reformatting the column names and date format for easier manipulation
 Wheat <- mutate(Wheat, month = month(Wheat$date))
 Rice <- mutate(Rice, month = month(Rice$date))
+#Creates the month fixed effect variable
 Wheat <- mutate(Wheat, COVIDWave2 = ifelse(date >= "2021-03-01" & date <= "2021-07-31", 1, 0), COVIDWave3 = ifelse(date >= "2022-01-01" & date <= "2022-03-10", 1, 0))
 Wheat <- filter(Wheat, quantity_of_arrivals != 0)
 Rice <- mutate(Rice, COVIDWave2 = ifelse(date >= "2021-03-01" & date <= "2021-07-31", 1, 0), COVIDWave3 = ifelse(date >= "2022-01-01" & date <= "2022-03-10", 1, 0))
 Rice <- filter(Rice, quantity_of_arrivals != 0)
+# Creates explanatory variables COVIDWave2 and COVIDWave3, as well as making sure that a logarithmic model works for the quantity of arrivals
 Wheat <-  filter(Wheat, year(date) >= 2017 & year(date) <= 2024)
 Rice <-  filter(Rice, year(date) >= 2017 & year(date) <= 2024)
+#Filter data to between years 2017 and 2024
 UttarPradeshWheat <- filter(Wheat, state == "Uttar Pradesh")
 MadhyaPradeshWheat <- filter(Wheat, state == "Madhya Pradesh")
 PunjabWheat <- filter(Wheat, state == "Punjab")
 WestBengalRice <- filter(Rice, state == "West Bengal")
 UttarPradeshRice <- filter(Rice, state == "Uttar Pradesh")
 OdishaRice <- filter(Rice, state == "Odisha")
+# Creates state datasets
 UttarPradeshWheatModalPriceModel <- feglm(modalprice~COVIDWave2+COVIDWave3|market+district+month+variety, UttarPradeshWheat, family = "gaussian", vcov_DK(UttarPradeshWheat, time = c("date"), lag = NULL, ssc = NULL, vcov_fix = TRUE))
 UttarPradeshWheatQuantityofArrivalsModel <- feglm(log(quantity_of_arrivals)~COVIDWave2+COVIDWave3|market+district+month+variety, UttarPradeshWheat, family = "gaussian", vcov_DK(UttarPradeshWheat, time = c("date"), lag = NULL, ssc = NULL, vcov_fix = TRUE))
 MadhyaPradeshWheatModalPriceModel <- feglm(modalprice~COVIDWave2+COVIDWave3|market+district+month+variety, MadhyaPradeshWheat, family = "gaussian", vcov_DK(MadhyaPradeshWheat, time = c("date"), lag = NULL, ssc = NULL, vcov_fix = TRUE))
@@ -38,5 +45,7 @@ UttarPradeshRiceModalPriceModel <- feglm(modalprice~COVIDWave2+COVIDWave3|market
 UttarPradeshRiceQuantityOfArrivalsModel <- feglm(log(quantity_of_arrivals)~COVIDWave2+COVIDWave3|market+district+month+variety, UttarPradeshRice, family = "gaussian", vcov_DK(UttarPradeshRice, time = c("date"), lag = NULL, ssc = NULL, vcov_fix = TRUE))
 OdishaRiceModalPriceModel <- feglm(modalprice~COVIDWave2+COVIDWave3|market+district+month+variety, OdishaRice, family = "gaussian", vcov_DK(OdishaRice, time = c("date"), lag = NULL, ssc = NULL, vcov_fix = TRUE))
 OdishaRiceQuantityOfArrivalsModel <- feglm(log(quantity_of_arrivals)~COVIDWave2+COVIDWave3|market+district+month+variety, OdishaRice, family = "gaussian", vcov_DK(OdishaRice, time = c("date"), lag = NULL, ssc = NULL, vcov_fix = TRUE))
+#Creates the fixed effects models for modal price and quantity of arrivals using market, distrct, month, and variety effects and Driscoll-Kraay standard errors
 modelsummary(list("Modal Price for Uttar Pradesh" = UttarPradeshWheatModalPriceModel, "ln(Quantity of Arrivals) for Uttar Pradesh" = UttarPradeshWheatQuantityofArrivalsModel, "Modal Price for Madhya Pradesh" = MadhyaPradeshWheatModalPriceModel, "ln(Quantity of Arrivals) for Madhya Pradesh" = MadhyaPradeshWheatQuantityofArrivalsModel,  "Modal Price for Punjab" = PunjabWheatModalPriceModel, "ln(Quantity of Arrivals) for Punjab" = PunjabWheatQuantityOfArrivalsModel), stars = TRUE, gof_omit = "BIC|AIC")
 modelsummary(list("Modal Price for West Bengal" = WestBengalRiceModalPriceModel, "ln(Quantity of Arrivals) for West Bengal" = WestBengalRiceQuantityOfArrivalsModel, "Modal Price for Uttar Pradesh" = UttarPradeshRiceModalPriceModel, "ln(Quantity of Arrivals) for Uttar Pradesh" = UttarPradeshRiceQuantityOfArrivalsModel,  "Modal Price for Odisha" = OdishaRiceModalPriceModel, "ln(Quantity of Arrivals) for Odisha" = OdishaRiceQuantityOfArrivalsModel), stars = TRUE, gof_omit = "BIC|AIC")
+# outputs final regression results
